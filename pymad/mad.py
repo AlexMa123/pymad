@@ -15,6 +15,7 @@ date: 09/2022
 import numpy as np
 import cupy as cp
 import time
+from numba import jit
 from numba.pycc import CC
 
 cc = CC('mad_cc')
@@ -51,9 +52,9 @@ def cal_mad_cuda(data, points):
     return mad
 
 
-@cc.export('cal_mad_jit', 'f8[:](f8[:,:], i4)')
-@cc.export('cal_mad_jit', 'f4[:](f4[:,:], i4)')
-def cal_mad_jit(data, points):
+@cc.export('cal_mad', 'f8[:](f8[:,:], i4)')
+@cc.export('cal_mad', 'f4[:](f4[:,:], i4)')
+def cal_mad(data, points):
     """
     Calculate MAD values. (by Johannes Zschocke)
 
@@ -109,9 +110,14 @@ def cal_mad_jit(data, points):
     return mad
 
 
+cal_mad_jit = jit(cal_mad)
+
+
 if __name__ == "__main__":
-    cc.compile()
     xyz = np.random.rand(3, 128 * 3600 * 8).astype(np.float32)
+    start = time.time()
+    mad = cal_mad(xyz, 128)
+    print('pure python: ', time.time() - start)
     xyz_cuda = cp.asarray(xyz)
     mad = cal_mad_cuda(xyz_cuda, 128)
     start = time.time()
